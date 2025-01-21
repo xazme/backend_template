@@ -1,21 +1,15 @@
-# app/main.py
+import uvicorn
 from fastapi import FastAPI
-from app.core.database.init_db import create_table
-from app.core.database.engine import engine
-from app.core.database.sessions import async_session
-
-app = FastAPI(lifespan=lambda: lifespan_handler())
+from contextlib import asynccontextmanager
+from app.core.database import create_table
 
 
-async def lifespan_handler():
+@asynccontextmanager
+async def lifespan_handler(app):
+    create_table()
+    yield
 
-    print("Инициализация базы данных...")
-    await create_table()
-
-    print("Закрытие сессий и завершение работы с базой данных...")
-    await engine.dispose()
+app = FastAPI(lifespan=lifespan_handler)
 
 if __name__ == "__main__":
-
-    import uvicorn
     uvicorn.run("main:app", reload=True)

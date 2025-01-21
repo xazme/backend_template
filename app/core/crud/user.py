@@ -1,9 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.models.models import User
+from app.core.schemas.user import UserCreate, UserResponce, UserUpdate
+from app.core.models.user import User
 
 
-async def create_user(name: str, email: str, session: AsyncSession) -> User:
-    new_user = User(name=name, email=email)
-    session.add(new_user)
+async def create_user(user_create: UserCreate, session: AsyncSession) -> User:
+    user = User(name=user_create.name, email=user_create.email)
+    session.add(user)
     await session.commit()
-    return new_user
+    return user_create

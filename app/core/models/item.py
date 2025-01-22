@@ -1,9 +1,8 @@
 from sqlalchemy.orm import Mapped, mapped_column
-from core.database.base import Base
+from core.database import Base
 
 
-class Items(Base):
-    __tablename__ = 'items'
+class Item(Base):
 
     name: Mapped[str] = mapped_column(index=True)
     weight: Mapped[float] = mapped_column(index=True)

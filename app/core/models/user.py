@@ -1,11 +1,10 @@
 from sqlalchemy.orm import Mapped, mapped_column
-from core.database.base import Base
+from core.database import Base
 
 
 class User(Base):
-    __tablename__ = 'users'
 
-    name: Mapped[str] = mapped_column(ndex=True)
+    name: Mapped[str] = mapped_column(index=True)
     email: Mapped[str] = mapped_column(unique=True, index=True)
 
     def __init__(self, name, email):

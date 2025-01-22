@@ -7,15 +7,15 @@ class ItemCreate(BaseModel):
     weight: Annotated[float, Field(..., gt=0, lt=100)]
 
 
-class ItemCreate(BaseModel):
+class ItemUpdate(BaseModel):
     name: Annotated[str, Field(..., min_length=3, max_length=100)]
     weight: Annotated[float, Field(..., gt=0, lt=100)]
 
 
-class UserResponce(BaseModel):
+class ItemsResponce(BaseModel):
     id: str
     name: str
-    email: float
+    weight: float
 
     class Config:
         orm_mode = True

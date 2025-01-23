@@ -7,12 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter(prefix='/users')
 
 
-@router.get('/', response_model=UserResponce)
+@router.get('/', response_model=list[UserResponce])
 async def get_all_users(session: AsyncSession = Depends(get_db)):
     return await get_users(session=session)
 
 
-@router.get('/{user_name}', response_model=UserResponce)
+@router.get('/{user_name}', response_model=UserResponce | None)
 async def get_user(user_name: str, session: AsyncSession = Depends(get_db)):
     res = await get_user_by_name(session=session, searched_name=user_name)
     if res is None:
@@ -25,7 +25,7 @@ async def create_new_user(user: UserCreate, session: AsyncSession = Depends(get_
     return await create_user(session=session, user_info=user)
 
 
-@router.put('/update/{user_name}', response_model=UserUpdate)
+@router.put('/update/{user_name}', response_model=UserResponce | None)
 async def update_user(user_name: str, user: UserUpdate, session: AsyncSession = Depends(get_db)):
     res = await update_user_by_name(session=session, new_info=user, searched_name=user_name)
     if res is None:
@@ -33,7 +33,7 @@ async def update_user(user_name: str, user: UserUpdate, session: AsyncSession = 
     return res
 
 
-@router.delete('/delete/{user_name}', response_model=UserResponce)
+@router.delete('/delete/{user_name}', response_model=UserResponce | None)
 async def delete_user(user_name: str, session: AsyncSession = Depends(get_db)):
     res = await delete_user_by_name(session=session, searched_name=user_name)
     if res is None:

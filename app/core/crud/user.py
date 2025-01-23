@@ -6,11 +6,10 @@ from app.core.models import User
 
 
 async def create_user(session: AsyncSession, user_info: UserCreate) -> UserResponce:
-    new_user = User(user_info.name, user_info.email)
     new_user = User(**user_info.model_dump())
 
-    async with session.begin():
-        session.add(new_user)
+    await session.add(new_user)
+    await session.commit()
 
     return UserResponce.from_orm(new_user)
 
@@ -20,7 +19,7 @@ async def get_users(session: AsyncSession) -> list[UserResponce]:
     result: Result = await session.execute(statement=stmt)
     users = result.scalars().all()
 
-    return [UserResponce.from_orm(user) for user in users]
+    return [UserResponce.model_validate(user) for user in users]
 
 
 async def get_user_by_name(session: AsyncSession, searched_name: str) -> UserResponce | None:
@@ -31,10 +30,11 @@ async def get_user_by_name(session: AsyncSession, searched_name: str) -> UserRes
     if user is None:
         return None
 
-    return UserResponce.from_orm(user)
+    return UserResponce.model_validate(user)
 
 
 async def delete_user_by_name(session: AsyncSession, searched_name: str) -> UserResponce | None:
+
     stmt = select(User).where(User.name == searched_name)
     result: Result = await session.execute(statement=stmt)
     user_to_delete = result.scalars().first()
@@ -42,10 +42,10 @@ async def delete_user_by_name(session: AsyncSession, searched_name: str) -> User
     if user_to_delete is None:
         return None
 
-    async with session.begin():
-        session.delete(user_to_delete)
+    await session.delete(user_to_delete)
+    await session.commit()
 
-    return UserResponce.from_orm(user_to_delete)
+    return UserResponce.model_validate(user_to_delete)
 
 
 async def update_user_by_name(session: AsyncSession, searched_name: str, new_info: UserUpdate) -> UserResponce | None:
@@ -59,7 +59,7 @@ async def update_user_by_name(session: AsyncSession, searched_name: str, new_inf
     user_to_update.name = new_info.name
     user_to_update.email = new_info.email
 
-    async with session.begin():
-        session.add(user_to_update)
+    await session.add(user_to_update)
+    await session.commit()
 
-    return UserResponce.from_orm(user_to_update)
+    return UserResponce.model_validate(user_to_update)

@@ -3,5 +3,5 @@ from app.config.config import settings
 
 engine = create_async_engine(
     url=settings.DATABASE_URL_asyncpg,
-    echo=True,
+    echo=settings.ECHO_STATUS_ON,
 )

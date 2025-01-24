@@ -11,7 +11,7 @@ async def create_user(session: AsyncSession, user_info: UserCreate) -> UserRespo
     await session.add(new_user)
     await session.commit()
 
-    return UserResponce.from_orm(new_user)
+    return UserResponce.model_validate(new_user)
 
 
 async def get_users(session: AsyncSession) -> list[UserResponce]:

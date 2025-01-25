@@ -10,6 +10,7 @@ async def lifespan_handler(app):
     await create_table()
     yield
 
+
 app = FastAPI(lifespan=lifespan_handler)
 app.include_router(router=router_v1)
 

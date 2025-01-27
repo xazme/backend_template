@@ -10,8 +10,6 @@ if TYPE_CHECKING:
 class Task(Base):
     title: Mapped[str] = mapped_column(String(100), index=True)
     body: Mapped[str] = mapped_column(Text, default="", server_default="")
+    user_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
 
-    id: Mapped[int] = mapped_column(ForeignKey(
-        'user.id'), primary_key=True, index=True)
-
-    user: Mapped['User'] = relationship(back_populates="")
+    user: Mapped["User"] = relationship(back_populates='task')

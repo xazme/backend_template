@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 class User(UserRelationShipMixins, Base):
 
-    name: Mapped[str] = mapped_column(String(50), index=True)
+    name: Mapped[str] = mapped_column(String(50), index=True, unique=True)
     email: Mapped[str] = mapped_column(String(), unique=True, index=True)
 
     task: Mapped[list['Task']] = relationship(back_populates='task')

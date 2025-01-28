@@ -1,6 +1,5 @@
 from sqlalchemy.orm import declared_attr, Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
-from app.core.database import Base
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

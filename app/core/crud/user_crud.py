@@ -8,7 +8,7 @@ from app.core.models import User
 async def create_user(session: AsyncSession, user_info: UserCreate) -> UserResponce:
     new_user = User(**user_info.model_dump())
 
-    await session.add(new_user)
+    session.add(new_user)
     await session.commit()
 
     return UserResponce.model_validate(new_user)
@@ -59,7 +59,7 @@ async def update_user_by_name(session: AsyncSession, searched_name: str, new_inf
     user_to_update.name = new_info.name
     user_to_update.email = new_info.email
 
-    await session.add(user_to_update)
+    session.add(user_to_update)
     await session.commit()
 
     return UserResponce.model_validate(user_to_update)

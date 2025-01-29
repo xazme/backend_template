@@ -1,11 +1,22 @@
-# from app.core.database import Base
-# from sqlalchemy import String, Text
-# from sqlalchemy.orm import Mapped, mapped_column
-# from .mixins import UserRelationShipMixins
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Text
+
+from app.core.database import Base
+from .mixins import UserRelationMixin
 
 
-# class Task(UserRelationShipMixins, Base):
-#     _user_back_populates = 'task'
+class Task(UserRelationMixin, Base):
 
-#     title: Mapped[str] = mapped_column(String(100), index=True)
-#     body: Mapped[str] = mapped_column(Text, default="", server_default="")
+    _user_back_populates = 'tasks'
+    _user_id_foreign_key = 'user.id'
+
+    title: Mapped[str] = mapped_column(
+        String(50),
+        index=True
+    )
+
+    description: Mapped[str] = mapped_column(
+        Text,
+        default='',
+        server_default='',
+    )

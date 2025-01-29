@@ -1,18 +1,26 @@
-# from typing import TYPE_CHECKING
-# from app.core.database import Base
-# from sqlalchemy.orm import Mapped, mapped_column
-# from sqlalchemy import String, ForeignKey
-# from .mixins import UserRelationShipMixins
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Text
 
-# # if TYPE_CHECKING:
-# from .user import User
+from app.core.database import Base
+from .mixins import UserRelationMixin
 
 
-# class Profile(Base, UserRelationShipMixins):
+class Profile(UserRelationMixin, Base):
 
-#     _user_back_populates = 'profile'
+    _user_back_populates = 'profile'
+    _user_id_foreign_key = 'user.id'
 
-#     name: Mapped['User'] = mapped_column(ForeignKey('user.name'))
-#     first_name: Mapped[str | None] = mapped_column(String(30))
-#     second_name: Mapped[str | None] = mapped_column(String(30))
-#     bio: Mapped[str | None] = mapped_column(String(300))
+    first_name: Mapped[str | None] = mapped_column(
+        String(30),
+        index=True,
+    )
+
+    second_name: Mapped[str | None] = mapped_column(
+        String(30),
+        default='',
+        server_default='',
+    )
+
+    bio: Mapped[str | None] = mapped_column(
+        Text,
+    )

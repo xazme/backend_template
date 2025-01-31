@@ -24,3 +24,6 @@ class Profile(UserRelationMixin, Base):
     bio: Mapped[str | None] = mapped_column(
         Text,
     )
+
+    def __str__(self):
+        return f"first name = {self.first_name}\n,second name = {self.second_name}\\n"

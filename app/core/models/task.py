@@ -20,3 +20,6 @@ class Task(UserRelationMixin, Base):
         default='',
         server_default='',
     )
+
+    def __str__(self):
+        return f"Title = {self.title}, description = {self.description}"

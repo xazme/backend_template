@@ -1,18 +1,22 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import func
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Integer, func
 from datetime import datetime
 from app.core.database import Base
+from .product_order_assoc import association_table
 
 if TYPE_CHECKING:
     from .product import Product
 
 
 class Order(Base):
-    promocode: Mapped[str | None]
+    promo: Mapped[str | None]
     created_at: Mapped[datetime] = mapped_column(
-        server_default=func.now(),
         default=datetime.now,
+        server_default=func.now()
     )
+
     products: Mapped[list['Product']] = relationship(
-        secondary='order_product_association', back_populates='orders')
+        secondary=association_table,
+        back_populates='orders'
+    )

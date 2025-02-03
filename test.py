@@ -13,7 +13,7 @@ async_session = async_sessionmaker(
     class_=AsyncSession,
     autoflush=False,
     autocommit=False,
-    expire_on_commit=False
+    expire_on_commit=False,
 )
 
 
@@ -23,35 +23,42 @@ async def create_tables():
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def create_order(ses: AsyncSession, promo: str | None):
-    order = Order(promocode=promo)
-    ses.add(order)
-    await ses.commit()
-    return order
+async def create_order(session: AsyncSession, promo: str | None):
+    new_order = Order(promo=promo)
+    session.add(new_order)
+    await session.commit()
 
 
-async def create_product(ses: AsyncSession, name: str, description: str, price: int):
-    product = Product(name=name, description=description, price=price)
-
-    ses.add(product)
-    await ses.commit()
-    return product
+async def create_products(
+    session: AsyncSession,
+    name: str,
+    description: str,
+    price: int,
+):
+    new_product = Product(name=name, description=description, price=price)
+    session.add(new_product)
+    await session.commit()
 
 
 async def main():
     await create_tables()
-    async with async_session() as ses:
-        item1 = await create_product(ses=ses, name='sextoy',
-                                     description='c++ book', price=300)
-        item2 = await create_product(ses=ses, name='book',
-                                     description='david gogings', price=300)
+    async with async_session() as session:
+        order1 = await create_order(
+            session=session,
+            promo="jopa",
+        )
 
-        order1 = await create_order(ses=ses, promo='123YOO')
-        order2 = await create_order(ses=ses, promo=None)
-        order1 = await ses.scalar(select(Order).where(Order.id == order1.id).options(selectinload(Order.products)))
-        order2 = await ses.scalar(select(Order).where(Order.id == order2.id).options(selectinload(Order.products)))
-        order1.products.append(item1)
-        order2.products.append(item1)
+        order1 = await create_order(
+            session=session,
+            promo="bebra",
+        )
 
-        await ses.commit()
+        mouse = await create_products(
+            session=session,
+            name="mouser",
+            description="super puper mouse",
+            price=1300,
+        )
+
+
 asyncio.run(main())

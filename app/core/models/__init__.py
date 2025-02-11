@@ -3,7 +3,6 @@
 # from .mixins import UserRelationMixin
 
 # suka ebanaya
-from .author import Author
-from .book import Book
-from .reader import Reader
-from .borrowinglist import BookReaderAssoc
+from .task import Task
+from .worker import Worker
+from .taskworkerassoc import TaskWorkerAssoc, Status

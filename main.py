@@ -7,7 +7,7 @@ from app.core.database import create_table
 
 @asynccontextmanager
 async def lifespan_handler(app):
-    await create_table()
+    # await create_table()
     yield
 
 

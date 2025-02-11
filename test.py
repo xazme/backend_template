@@ -1,12 +1,12 @@
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import Base, engine
-from sqlalchemy import select
-
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import select, Result
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
-from app.core.database import engine
-from app.core.models import Book, Reader, BookReaderAssoc, Author
+from app.core.models import *
+from sqlalchemy.exc import MultipleResultsFound
+from typing import Type, TypeVar
 
 async_session = async_sessionmaker(
     bind=engine,
@@ -16,6 +16,8 @@ async_session = async_sessionmaker(
     expire_on_commit=False,
 )
 
+T = TypeVar("T", Worker, Task)
+
 
 async def create_tables():
     async with engine.begin() as conn:
@@ -23,121 +25,138 @@ async def create_tables():
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def create_book(session: AsyncSession, title: str, author: Author):
-    new_book = Book(title=title, author=author)
-    session.add(new_book)
-    await session.commit()
-    return new_book
+async def check_model(session: AsyncSession, model: Type[T]):
+    stmt = select(type(model)).where(type(model).id == model.id)
+    result: Result = await session.execute(stmt)
+    entity = result.scalar_one_or_none()
+    return entity
 
 
-async def create_reader(session: AsyncSession, name: str, email: str):
-    new_reader = Reader(name=name, email=email)
-    session.add(new_reader)
-    await session.commit()
-    return new_reader
-
-
-async def create_author(session: AsyncSession, name: str):
-    new_author = Author(name=name)
-    session.add(new_author)
-    await session.commit()
-    return new_author
-
-
-async def reader_get_book(ses: AsyncSession, book: Book, reader: Reader):
-    if not book.availible:
-        raise Exception("книга недоступна")
-
-    reader.book_info.append(BookReaderAssoc(book=book))
-
-    book.availible = False
-    await ses.commit()
-    print(f"книга была взята {reader.name}")
-
-
-async def reader_return_book(ses: AsyncSession, book: Book, reader: Reader):
-    if book.availible:
-        raise Exception("книга не бралась")
-
-    reader.book_info.pop(BookReaderAssoc(book=book))
-
-    book.availible = True
-    await ses.commit()
-    print(f"книга была возвращена {reader.name}")
-
-
-async def get_reader_book(ses: AsyncSession, reader: Reader):
-    stmt = (
-        select(Reader)
-        .where(Reader.id == reader.id)
-        .options(selectinload(Reader.book_info).joinedload(BookReaderAssoc.book))
+async def create_worker(session: AsyncSession, name: str, email: str):
+    check_worker_info = await check_model(
+        session=session,
+        model=Worker(name=name, email=email),
     )
+
+    if check_worker_info:
+        raise Exception("worker уже есть")
+
+    new_worker = Worker(name=name, email=email)
+    session.add(new_worker)
+    await session.commit()
+    return new_worker
+
+
+async def create_task(session: AsyncSession, title: str, description: str):
+    check_task_info = await check_model(
+        session=session,
+        model=Task(title=title, description=description),
+    )
+
+    if check_task_info:
+        raise Exception("task уже есть")
+
+    new_task = Task(title=title, description=description)
+    session.add(new_task)
+    await session.commit()
+    return new_task
+
+
+async def change_status_assoc(session: AsyncSession, task: Task):
+    try:
+        stmt = (
+            select(TaskWorkerAssoc).where(TaskWorkerAssoc.task_id == task.id).limit(1)
+        )
+        result: Result = await session.execute(stmt)
+        assoc = result.scalar_one_or_none()
+
+        if assoc is None:
+            raise Exception("ПОШЕЛ НАХУЙ")
+
+        assoc.status = Status.complete.name
+        await session.commit()
+
+    except MultipleResultsFound:
+        raise Exception("Найдено несколько ассоциаций с задачей")
+
+
+async def get_all_tasks(session: AsyncSession):
+    stmt = select(TaskWorkerAssoc)
+
+    result: Result = await session.execute(stmt)
+    tasks = result.scalars().all()
+
+    z = [f"{task.status} and {task.task.title}" for task in tasks]
+    return z
 
 
 async def main():
     await create_tables()
     async with async_session() as session:
+        # Создание воркеров
+        try:
+            worker1 = await create_worker(
+                session, name="John Doe", email="johndoe@example.com"
+            )
+            print(f"Создан worker: {worker1.name}")
 
-        # authors
-        author1 = await create_author(session, "OLEG")
-        author2 = await create_author(session, "OLEG CLONE")
-        author3 = await create_author(session, "OLEG CLONE CLONE")
-        author4 = await create_author(session, "super oleg master 123")
+            worker2 = await create_worker(
+                session, name="Jane Smith", email="janesmith@example.com"
+            )
+            print(f"Создан worker: {worker2.name}")
 
-        # books
-        book1 = await create_book(session, "какашки", author1)
-        book2 = await create_book(session, "алхимия это пизде", author2)
-        book3 = await create_book(session, "ебаный рот", author3)
-        book4 = await create_book(session, "какаю в туалети", author4)
+            worker3 = await create_worker(
+                session, name="Alice Johnson", email="alicejohnson@example.com"
+            )
+            print(f"Создан worker: {worker3.name}")
+        except Exception as e:
+            print(f"Ошибка при создании воркера: {e}")
 
-        # readers
-        reader1 = await create_reader(session, "PISYA", "shaboldaena@gmail.com")
-        reader2 = await create_reader(session, "ebaniu", "shol123daena@gmail.com")
-        reader3 = await create_reader(session, "zxcqwe", "12shazxcna@gmail.com")
-        reader4 = await create_reader(session, "dedad", "colshpoaaena@gmail.com")
+        # Создание тасков
+        try:
+            task1 = await create_task(
+                session, title="Task 1", description="Description for task 1"
+            )
+            print(f"Создан task: {task1.title}")
 
-        # readers loading
-        reader1 = await session.scalar(
-            select(Reader)
-            .where(Reader.id == reader1.id)
-            .options(selectinload(Reader.book_info))
+            task2 = await create_task(
+                session, title="Task 2", description="Description for task 2"
+            )
+            print(f"Создан task: {task2.title}")
+
+            task3 = await create_task(
+                session, title="Task 3", description="Description for task 3"
+            )
+            print(f"Создан task: {task3.title}")
+        except Exception as e:
+            print(f"Ошибка при создании таска: {e}")
+
+        worker1 = await session.scalar(
+            select(Worker)
+            .where(Worker.id == worker1.id)
+            .options(selectinload(Worker.task_info).selectinload(TaskWorkerAssoc.task))
+        )
+        worker2 = await session.scalar(
+            select(Worker)
+            .where(Worker.id == worker2.id)
+            .options(selectinload(Worker.task_info).selectinload(TaskWorkerAssoc.task))
+        )
+        worker3 = await session.scalar(
+            select(Worker)
+            .where(Worker.id == worker3.id)
+            .options(selectinload(Worker.task_info).selectinload(TaskWorkerAssoc.task))
         )
 
-        reader2 = await session.scalar(
-            select(Reader)
-            .where(Reader.id == reader2.id)
-            .options(selectinload(Reader.book_info))
-        )
+        worker1.task_info.append(TaskWorkerAssoc(task=task1))
+        worker2.task_info.append(TaskWorkerAssoc(task=task2))
+        worker3.task_info.append(TaskWorkerAssoc(task=task1))
 
-        reader3 = await session.scalar(
-            select(Reader)
-            .where(Reader.id == reader3.id)
-            .options(selectinload(Reader.book_info))
-        )
+        await session.commit()
 
-        reader4 = await session.scalar(
-            select(Reader)
-            .where(Reader.id == reader4.id)
-            .options(selectinload(Reader.book_info))
-        )
+        await change_status_assoc(session=session, task=task1)
+        tasks = await get_all_tasks(session=session)
 
-        readers = [reader1, reader2, reader3, reader4]
-        books = [book1, book2, book3, book4]
-
-        await reader_get_book(session, book1, reader1)
-        await reader_get_book(session, book4, reader1)
-        await reader_get_book(session, book2, reader2)
-        await reader_get_book(session, book3, reader3)
-        # await reader_get_book(session, book4, reader4)
-
-        # await reader_get_book(session, book1, reader3)
-
-        reader = await get_reader_book(session, reader1)
-
-        for elem in reader:
-            print(elem.name, elem.email)
-            for book in elem.book_info:
-                print(book.book.title)
+        print(tasks)
 
 
 asyncio.run(main())

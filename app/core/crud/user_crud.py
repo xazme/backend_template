@@ -1,65 +1,65 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.engine import Result
-from sqlalchemy import select
-from app.core.schemas import UserCreate, UserResponce, UserUpdate
-from app.core.models import User
+# from sqlalchemy.ext.asyncio import AsyncSession
+# from sqlalchemy.engine import Result
+# from sqlalchemy import select
+# from app.core.schemas import UserCreate, UserResponce, UserUpdate
+# from app.core.models import User
 
 
-async def create_user(session: AsyncSession, user_info: UserCreate) -> UserResponce:
-    new_user = User(**user_info.model_dump())
+# async def create_user(session: AsyncSession, user_info: UserCreate) -> UserResponce:
+#     new_user = User(**user_info.model_dump())
 
-    session.add(new_user)
-    await session.commit()
+#     session.add(new_user)
+#     await session.commit()
 
-    return UserResponce.model_validate(new_user)
-
-
-async def get_users(session: AsyncSession) -> list[UserResponce]:
-    stmt = select(User).order_by(User.id)
-    result: Result = await session.execute(statement=stmt)
-    users = result.scalars().all()
-
-    return [UserResponce.model_validate(user) for user in users]
+#     return UserResponce.model_validate(new_user)
 
 
-async def get_user_by_name(session: AsyncSession, searched_name: str) -> UserResponce | None:
-    stmt = select(User).where(User.name == searched_name).limit(1)
-    result: Result = await session.execute(statement=stmt)
-    user = result.scalars().first()
+# async def get_users(session: AsyncSession) -> list[UserResponce]:
+#     stmt = select(User).order_by(User.id)
+#     result: Result = await session.execute(statement=stmt)
+#     users = result.scalars().all()
 
-    if user is None:
-        return None
-
-    return UserResponce.model_validate(user)
+#     return [UserResponce.model_validate(user) for user in users]
 
 
-async def delete_user_by_name(session: AsyncSession, searched_name: str) -> UserResponce | None:
+# async def get_user_by_name(session: AsyncSession, searched_name: str) -> UserResponce | None:
+#     stmt = select(User).where(User.name == searched_name).limit(1)
+#     result: Result = await session.execute(statement=stmt)
+#     user = result.scalars().first()
 
-    stmt = select(User).where(User.name == searched_name)
-    result: Result = await session.execute(statement=stmt)
-    user_to_delete = result.scalars().first()
+#     if user is None:
+#         return None
 
-    if user_to_delete is None:
-        return None
-
-    await session.delete(user_to_delete)
-    await session.commit()
-
-    return UserResponce.model_validate(user_to_delete)
+#     return UserResponce.model_validate(user)
 
 
-async def update_user_by_name(session: AsyncSession, searched_name: str, new_info: UserUpdate) -> UserResponce | None:
-    stmt = select(User).where(User.name == searched_name)
-    result: Result = await session.execute(statement=stmt)
-    user_to_update = result.scalars().first()
+# async def delete_user_by_name(session: AsyncSession, searched_name: str) -> UserResponce | None:
 
-    if user_to_update is None:
-        return None
+#     stmt = select(User).where(User.name == searched_name)
+#     result: Result = await session.execute(statement=stmt)
+#     user_to_delete = result.scalars().first()
 
-    user_to_update.name = new_info.name
-    user_to_update.email = new_info.email
+#     if user_to_delete is None:
+#         return None
 
-    session.add(user_to_update)
-    await session.commit()
+#     await session.delete(user_to_delete)
+#     await session.commit()
 
-    return UserResponce.model_validate(user_to_update)
+#     return UserResponce.model_validate(user_to_delete)
+
+
+# async def update_user_by_name(session: AsyncSession, searched_name: str, new_info: UserUpdate) -> UserResponce | None:
+#     stmt = select(User).where(User.name == searched_name)
+#     result: Result = await session.execute(statement=stmt)
+#     user_to_update = result.scalars().first()
+
+#     if user_to_update is None:
+#         return None
+
+#     user_to_update.name = new_info.name
+#     user_to_update.email = new_info.email
+
+#     session.add(user_to_update)
+#     await session.commit()
+
+#     return UserResponce.model_validate(user_to_update)

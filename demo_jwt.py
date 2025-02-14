@@ -1,119 +1,94 @@
-from jwt.exceptions import InvalidTokenError
-from fastapi import APIRouter, Depends, Form, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
-from app.auth import utils as auth_utils
-from schm_test import UserSchema
-
-router = APIRouter(prefix="/jwt", tags=["JWT"])
+from fastapi import APIRouter, Depends, Form
+from fastapi.security import OAuth2PasswordBearer, HTTPBearer
+from jwt.exceptions import ExpiredSignatureError
+from schm_test import UserSchema, TokenInfo
+from app.auth import ExcHelper, JWTHelper, HashHelper, JWTMaker
 
 http_bearer = HTTPBearer()
 
+router = APIRouter(
+    prefix="/jwt", tags=["JWT TRAINING"], dependencies=[Depends(http_bearer)]
+)
 
-class TokenInfo(BaseModel):
-    access_token: str
-    token_type: str
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/jwt/login")
 
 john = UserSchema(
     username="john",
-    password=auth_utils.hash_pswrd("qwerty"),
-    email="fooboo@gmail.com",
-    active=True,  # Установлено поле активности
+    password=HashHelper.hash_password("sexbomba123"),
+    email="jognthenotoleg@gmail.com",
 )
 
-sam = UserSchema(
-    username="sam not oleg",
-    password=auth_utils.hash_pswrd("zxcaddeadinsa"),
-    email="sexybecon12@gmail.com",
-    active=True,  # Установлено поле активности
+oleg = UserSchema(
+    username="oleg",
+    password=HashHelper.hash_password("iamcoolperson"),
+    email="thecoololeg@gmail.com",
 )
 
-users_db: dict[str, UserSchema] = {
+users_db: dict[str, dict] = {
     john.username: john,
-    sam.username: sam,
+    oleg.username: oleg,
 }
 
 
-def validate_auth_user(
-    username: str = Form(),
-    password: str = Form(),
-):
-    unauthed_exc = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid username or password",
-    )
+def get_user_payload(token=Depends(oauth2_scheme)):
+    try:
+        payload = JWTHelper.decode_jwt(token=token)
+    except ExpiredSignatureError:
+        ExcHelper.raise_http_401_not_auth("ошибка на стороне сервера")
+    return payload
+
+
+def get_user_data(payload: dict = Depends(get_user_payload)):
+
+    token_type = payload.get(JWTMaker.TOKEN_TYPE_FIELD)
+
+    if token_type != JWTMaker.ACCESS_TOKEN:
+        raise ExcHelper.raise_http_401_not_auth("token error")
+
+    username = payload.get("username")
+
     if not (user := users_db.get(username)):
-        raise unauthed_exc
-
-    if not auth_utils.validate_password(
-        password=password,
-        hashed_password=user.password,
-    ):
-        raise unauthed_exc
-
-    if not user.active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User inactive",
-        )
+        ExcHelper.raise_http_401_not_auth("не удалось найти пользователя")
 
     return user
 
 
-def get_current_token_payload(
-    credentials: HTTPAuthorizationCredentials = Depends(http_bearer),
-) -> dict:
-    token = credentials.credentials  # Извлекаем токен из credentials
-    try:
-        payload = auth_utils.decode_jwt(token=token)
-    except InvalidTokenError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token error: {e}",
-        )
-    return payload
-
-
-def get_current_auth_user(
-    payload: dict = Depends(get_current_token_payload),
-) -> UserSchema:
-    username: str | None = payload.get("sub")
-    print(f"Username from token: {username}")  # Отладочное сообщение
-    if user := users_db.get(username):
+def chech_user_status(user: UserSchema = Depends(get_user_data)):
+    if not user.active:
+        ExcHelper.raise_http_403_forbiden()
+    else:
         return user
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Token invalid (user not found)",
-    )
 
 
-def get_current_active_auth_user(
-    user: UserSchema = Depends(get_current_auth_user),
+def validate_loginned_user(
+    username=Form(),
+    password=Form(),
 ):
-    print(f"User active status: {user.active}")  # Отладочное сообщение
-    if user.active:
-        return user
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="User inactive",
+    if not (user := users_db.get(username)):
+        ExcHelper.raise_http_401_not_auth(detail="invalid login or password")
+
+    if not HashHelper.check_password(password=password, hashed_password=user.password):
+        ExcHelper.raise_http_401_not_auth(detail="invalid login or password")
+
+    return user
+
+
+def create_jwt(payload: dict):
+    token = JWTHelper.encode_jwt(payload=payload)
+
+
+@router.post("/login")
+async def user_login(user: UserSchema = Depends(validate_loginned_user)):
+    access_token = JWTMaker.generate_access_token(user=user)
+    refresh_token = JWTMaker.generate_refresh_token(user=user)
+    return TokenInfo(
+        access_token=access_token,
+        refresh_token=refresh_token,
     )
 
 
-@router.post("/login/", response_model=TokenInfo)
-def auth_user_issue_jwt(user: UserSchema = Depends(validate_auth_user)):
-    jwt_payload = {
-        "sub": user.username,
-        "username": user.username,
-        "email": user.email,
-    }
-    token = auth_utils.encode_jwt(payload=jwt_payload)
-    return TokenInfo(access_token=token, token_type="Bearer")
-
-
-@router.get("/users/me")
-def auth_user_check_self_info(user: UserSchema = Depends(get_current_active_auth_user)):
+@router.get("/me")
+async def show_user_profile(user: UserSchema = Depends(chech_user_status)):
     return {
         "username": user.username,
-        "email": user.email,
     }

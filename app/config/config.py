@@ -15,11 +15,16 @@ class Settings(BaseSettings):
     PRIVATE_KEY_PATH: str = os.getenv("PRIVATE_KEY_PATH")
     PUBLIC_KEY_PATH: str = os.getenv("PUBLIC_KEY_PATH")
     ALGORITHM: str = "RS256"
-    access_token_expire_minutes: int = 3
+    access_token_expire_minutes: int = 10
+    refresh_token_expire_days: int = 7
 
     @property
     def ACCESS_TOKEN_EXPIRE_MINUTES(self):
         return self.access_token_expire_minutes
+
+    @property
+    def REFRESH_TOKEN_EXPIRE_DAYS(self):
+        return self.refresh_token_expire_days
 
     @property
     def PRIVATE_KEY(self):

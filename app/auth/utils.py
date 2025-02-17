@@ -1,10 +1,9 @@
 import jwt
 import bcrypt
 from app.config import settings
+from schm_test import UserSchema
 from datetime import timedelta, datetime
 from fastapi import HTTPException, status
-
-from schm_test import UserSchema
 
 
 class ExcHelper:
@@ -17,15 +16,15 @@ class ExcHelper:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
 
-class JWTHelper:
+class JWTOperations:
 
     @staticmethod
     def encode_jwt(
         payload: dict,
-        expire_timedelta: timedelta | None = None,
-        expire_minutes: int = settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         private_key: str = settings.PRIVATE_KEY,
         algorithm: str = settings.ALGORITHM_TYPE,
+        expire_minutes: int = settings.DEFAULT_VALUE_EXPIRE_MINUTES,
+        expire_timedelta: timedelta | None = None,
     ):
         to_encode = payload.copy()
         now = datetime.utcnow()
@@ -40,90 +39,83 @@ class JWTHelper:
             iat=now,
         )
 
-        token = jwt.encode(
+        return jwt.encode(
             payload=to_encode,
             key=private_key,
             algorithm=algorithm,
         )
 
-        return token
-
-    @staticmethod
     def decode_jwt(
         token: str | bytes,
         public_key: str = settings.PUBLIC_KEY,
         algorithm: str = settings.ALGORITHM_TYPE,
     ):
-        try:
-            payload = jwt.decode(
-                jwt=token,
-                key=public_key,
-                algorithms=[algorithm],
-            )
-        except jwt.InvalidTokenError:
-            raise ExcHelper.raise_http_401_not_auth(detail="invalid token")
-
-        return payload
-
-
-class HashHelper:
-
-    @staticmethod
-    def check_password(password: str, hashed_password: bytes):
-        return bcrypt.checkpw(
-            password=password.encode(), hashed_password=hashed_password
+        return jwt.decode(
+            jwt=token,
+            key=public_key,
+            algorithms=list(algorithm),
         )
+
+
+class HashOperations:
 
     @staticmethod
     def hash_password(password: str):
-        salt = bcrypt.gensalt()
-        hashed_password = bcrypt.hashpw(password=password.encode(), salt=salt)
-        return hashed_password
-
-
-class JWTMaker:
-
-    TOKEN_TYPE_FIELD = "type"
-    ACCESS_TOKEN = "access_token"
-    REFRESH_TOKEN = "refresh_token"
+        return bcrypt.hashpw(
+            password=password.encode(),
+            salt=bcrypt.gensalt(),
+        )
 
     @staticmethod
-    def create_token(
-        token_data: dict,
-        expire_minutes: int = settings.ACCESS_TOKEN_EXPIRE_MINUTES,
-        expire_timedelta: datetime | None = None,
-        token_type=TOKEN_TYPE_FIELD,
-    ):
-        jwt_payload = {JWTMaker.TOKEN_TYPE_FIELD: token_type}
-        jwt_payload.update(token_data)
+    def validate_password(password: str, hashed_password: bytes):
+        return bcrypt.checkpw(
+            password=password.encode(),
+            hashed_password=hashed_password,
+        )
 
-        return JWTHelper.encode_jwt(
-            payload=jwt_payload,
-            expire_timedelta=expire_timedelta,
+
+class TokensGenerator:
+    TOKEN_TYPE_FIELD: str = "type"
+    ACCESS_TOKEN: str = "access token"
+    REFRESH_TOKEN: str = "refresh token"
+
+    @staticmethod
+    def __generate_token(
+        token_data: dict,
+        token_type: str = TOKEN_TYPE_FIELD,
+        expire_minutes: int = settings.DEFAULT_VALUE_EXPIRE_MINUTES,
+        expire_timedelta: timedelta | None = None,
+    ):
+        token_payload = {TokensGenerator.TOKEN_TYPE_FIELD: token_type}
+        token_payload.update(token_data)
+
+        return JWTOperations.encode_jwt(
+            payload=token_payload,
             expire_minutes=expire_minutes,
+            expire_timedelta=expire_timedelta,
         )
 
     @staticmethod
     def generate_access_token(user: UserSchema):
         payload = {
+            "sub": user.username,
             "username": user.username,
             "email": user.email,
         }
-        token = JWTMaker.create_token(
-            token_data=payload,
-            token_type=JWTMaker.ACCESS_TOKEN,
-        )
-        return token
 
-    @staticmethod
+        return TokensGenerator.__generate_token(
+            token_data=payload,
+            token_type=TokensGenerator.ACCESS_TOKEN,
+            expire_minutes=5,
+        )
+
     def generate_refresh_token(user: UserSchema):
         payload = {
-            "username": user.username,
+            "sub": user.username,
         }
 
-        token = JWTMaker.create_token(
+        return TokensGenerator.__generate_token(
             token_data=payload,
-            token_type=JWTMaker.REFRESH_TOKEN,
+            token_type=TokensGenerator.REFRESH_TOKEN,
             expire_timedelta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         )
-        return token

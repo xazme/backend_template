@@ -45,6 +45,7 @@ class JWTOperations:
             algorithm=algorithm,
         )
 
+    @staticmethod
     def decode_jwt(
         token: str | bytes,
         public_key: str = settings.PUBLIC_KEY,
@@ -53,7 +54,7 @@ class JWTOperations:
         return jwt.decode(
             jwt=token,
             key=public_key,
-            algorithms=list(algorithm),
+            algorithms=[algorithm],
         )
 
 

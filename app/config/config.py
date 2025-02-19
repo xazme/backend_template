@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     PUBLIC_KEY_PATH: str = os.getenv("PUBLIC_KEY_PATH")
     ALGORITHM: str = "RS256"
     default_value_expire_minutes: int = 10
-    access_token_expire_minutes: int = 10
+    access_token_expire_minutes: int = 1
     refresh_token_expire_days: int = 7
 
     @property

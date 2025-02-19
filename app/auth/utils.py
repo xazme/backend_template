@@ -77,8 +77,8 @@ class HashOperations:
 
 class TokensGenerator:
     TOKEN_TYPE_FIELD: str = "type"
-    ACCESS_TOKEN: str = "access token"
-    REFRESH_TOKEN: str = "refresh token"
+    ACCESS_TOKEN: str = "access_token"
+    REFRESH_TOKEN: str = "refresh_token"
 
     @staticmethod
     def __generate_token(
@@ -107,7 +107,7 @@ class TokensGenerator:
         return TokensGenerator.__generate_token(
             token_data=payload,
             token_type=TokensGenerator.ACCESS_TOKEN,
-            expire_minutes=5,
+            expire_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
         )
 
     def generate_refresh_token(user: UserSchema):

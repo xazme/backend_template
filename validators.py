@@ -1,5 +1,5 @@
-from fastapi import Form, Depends, Response, Request
-from fastapi.security import OAuth2PasswordBearer, HTTPBearer
+from fastapi import Form, Depends, Request
+from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import ExpiredSignatureError
 from app.auth import TokensGenerator, HashOperations, ExcHelper, JWTOperations
 from schm_test import UserSchema
@@ -49,20 +49,19 @@ class TokenService:
             TokensGenerator.ACCESS_TOKEN,
             TokensGenerator.REFRESH_TOKEN,
         ]:
-            raise ExcHelper.raise_http_403_forbiden("not valid token format")
+            ExcHelper.raise_http_403_forbiden("not valid token format")
 
         token_type = payload.get(TokensGenerator.TOKEN_TYPE_FIELD)
 
         print(f"дан {token_type}, искомый {selected_token}")
 
         if token_type != selected_token:
-            raise ExcHelper.raise_http_403_forbiden("invalid token")
+            ExcHelper.raise_http_403_forbiden("invalid token")
         return True
 
     @staticmethod
     def get_refresh_token(request: Request):
         refresh_token = request.cookies.get(TokensGenerator.REFRESH_TOKEN)
-        # на пустоту
         return (
             refresh_token
             if refresh_token
@@ -76,10 +75,10 @@ class UserService:
         try:
             payload = JWTOperations.decode_jwt(token=token)
         except ExpiredSignatureError:
-            raise ExcHelper.raise_http_401_not_auth(detail="Token has expired")
+            ExcHelper.raise_http_401_not_auth(detail="Token has expired")
         except Exception as e:
 
-            raise ExcHelper.raise_http_403_forbiden(detail="Invalid token")
+            ExcHelper.raise_http_403_forbiden(detail="Invalid token")
         return payload
 
     @staticmethod
@@ -98,7 +97,7 @@ class UserService:
     def get_user_from_database(payload: dict):
         username = payload.get("sub")
         if not (user := users_db.get(username)):
-            raise ExcHelper.raise_http_401_not_auth("invalid user")
+            ExcHelper.raise_http_401_not_auth("invalid user")
         else:
             return user
 
@@ -114,6 +113,7 @@ class UserGetterFromToken:
     ):
         if self.token_type == TokensGenerator.ACCESS_TOKEN:
             access_payload = UserService.try_decode(access_token)
+            print(access_token)
             TokenService.validate_token(access_payload, self.token_type)
             return UserService.get_user_from_database(access_payload)
 
@@ -124,5 +124,3 @@ class UserGetterFromToken:
 
 user_by_access = UserGetterFromToken(TokensGenerator.ACCESS_TOKEN)
 user_by_refresh = UserGetterFromToken(TokensGenerator.REFRESH_TOKEN)
-
-### pizda

@@ -4,11 +4,8 @@ from fastapi.security import HTTPBearer
 from app.auth import TokensGenerator
 from validators import AuthrizationService, user_by_access, user_by_refresh
 
-# dependencies=[Depends(http_bearer)
-http_bearer = HTTPBearer(auto_error=False)
-router = APIRouter(
-    prefix="/jwt", tags=["JWT TRAINING"], dependencies=[Depends(http_bearer)]
-)
+# http_bearer = HTTPBearer(auto_error=False)
+router = APIRouter(prefix="/jwt", tags=["JWT TRAINING"])
 
 
 @router.post("/login")
@@ -27,6 +24,8 @@ async def auth_user(
         samesite="lax",
     )
 
+    # response.headers["Authorization"] = f"Bearer {access_token}"
+
     return TokenInfo(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -35,23 +34,11 @@ async def auth_user(
 
 @router.post("/refresh", response_model_exclude_none=True)
 async def refresh_access_token(
-    response: Response,
     user: UserSchema = Depends(user_by_refresh),
 ):
-    refresh_token = TokensGenerator.generate_refresh_token(user)
-    response.set_cookie(
-        key=TokensGenerator.REFRESH_TOKEN,
-        value=refresh_token,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-    )
-
     access_token = TokensGenerator.generate_access_token(user=user)
-    # response.headers["Authorization"] = f"Bearer {access_token}"
     return TokenInfo(
         access_token=access_token,
-        refresh_token=refresh_token,
     )
 
 

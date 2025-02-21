@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends, Response
 from schm_test import UserSchema, TokenInfo
-from fastapi.security import HTTPBearer
 from app.auth import TokensGenerator
 from validators import AuthrizationService, user_by_access, user_by_refresh
 
-# http_bearer = HTTPBearer(auto_error=False)
 router = APIRouter(prefix="/jwt", tags=["JWT TRAINING"])
 
 
@@ -13,6 +11,7 @@ async def auth_user(
     response: Response,
     user: UserSchema = Depends(AuthrizationService.auth_user),
 ):
+    print("вью начал выполнятся")
     access_token = TokensGenerator.generate_access_token(user=user)
     refresh_token = TokensGenerator.generate_refresh_token(user=user)
 
@@ -24,7 +23,7 @@ async def auth_user(
         samesite="lax",
     )
 
-    # response.headers["Authorization"] = f"Bearer {access_token}"
+    print("вью закончил выполнение")
 
     return TokenInfo(
         access_token=access_token,

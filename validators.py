@@ -31,6 +31,7 @@ class AuthrizationService:
         username: str = Form(),
         password: str = Form(),
     ):
+        print("депендс выполняется")
         if not (user := users_db.get(username)):
             ExcHelper.raise_http_401_not_auth("invalid username")
 
@@ -38,7 +39,7 @@ class AuthrizationService:
             password=password, hashed_password=user.password
         ):
             ExcHelper.raise_http_401_not_auth("invalid password")
-
+        print("депендс закончил")
         return user
 
 
